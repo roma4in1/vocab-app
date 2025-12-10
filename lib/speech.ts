@@ -1,4 +1,34 @@
+// lib/speech.ts
 // Speech utilities for Text-to-Speech and Speech Recognition
+
+/**
+ * Get the best available voice for a language
+ * Prioritizes native voices over non-native ones
+ */
+function getBestVoice(language: 'french' | 'korean'): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis.getVoices()
+  const langCode = language === 'french' ? 'fr' : 'ko'
+  
+  // Priority 1: Exact match with local voice (fr-FR, ko-KR)
+  const exactLocal = voices.find(voice => 
+    voice.lang.startsWith(langCode) && voice.localService
+  )
+  if (exactLocal) return exactLocal
+  
+  // Priority 2: Any voice that starts with the language code and is local
+  const anyLocal = voices.find(voice => 
+    voice.lang.startsWith(langCode)
+  )
+  if (anyLocal) return anyLocal
+  
+  // Priority 3: Google/online voices for the language
+  const onlineVoice = voices.find(voice => 
+    voice.lang.startsWith(langCode) && !voice.localService
+  )
+  if (onlineVoice) return onlineVoice
+  
+  return null
+}
 
 /**
  * Speaks a word in the target language using Web Speech API
@@ -24,6 +54,15 @@ export function speakWord(
   
   // Set language code
   utterance.lang = language === 'french' ? 'fr-FR' : 'ko-KR'
+  
+  // Try to get the best voice for this language
+  const bestVoice = getBestVoice(language)
+  if (bestVoice) {
+    utterance.voice = bestVoice
+    console.log(`Using voice: ${bestVoice.name} (${bestVoice.lang})`)
+  } else {
+    console.warn(`No native ${language} voice found, using default`)
+  }
   
   // Slightly slower rate for language learning
   utterance.rate = rate

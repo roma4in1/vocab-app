@@ -119,6 +119,8 @@ export default function LearnPage() {
       const generatedActivities = generateAndShuffleActivities(adaptedWords)
       
       setActivities(generatedActivities)
+      console.log('Speech recognition available:', speechRecognitionAvailable)
+console.log('Generated activities:', generatedActivities.map(a => a.modeType))
       setLoading(false)
     } catch (error) {
       console.error('Error loading learning session:', error)
@@ -146,14 +148,14 @@ export default function LearnPage() {
   }
 
   function selectModesForWord(word: AdaptedWord): ModeType[] {
-    let availableModes: ModeType[] = [
+    const availableModes: ModeType[] = [
       'multiple-choice-target',
       'multiple-choice-english',
       'listening-comprehension',
       'sentence-builder'
     ]
 
-    if (speechRecognitionAvailable) {
+    if (isSpeechRecognitionSupported()) {
       availableModes.push('pronunciation-practice')
     }
 

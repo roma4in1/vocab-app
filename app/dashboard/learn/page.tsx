@@ -1,4 +1,5 @@
 // app/dashboard/learn/page.tsx
+// ✅ FIXED: Learning page with pronunciation practice mode - NO direction prop
 
 'use client'
 
@@ -19,7 +20,6 @@ import ListeningComprehension from '@/components/learning-modes/ListeningCompreh
 import SentenceBuilder from '@/components/learning-modes/SentenceBuilder'
 import PronunciationPractice from '@/components/learning-modes/PronunciationPractice'
 
-// Adapter to convert database format to component format
 interface AdaptedWord {
   id: string
   word: string
@@ -28,7 +28,6 @@ interface AdaptedWord {
   repetition: number
 }
 
-// Activity represents one mode for one word
 interface Activity {
   word: AdaptedWord
   modeType: ModeType
@@ -36,11 +35,11 @@ interface Activity {
 }
 
 type ModeType = 
-  | 'multiple-choice-to-english'
-  | 'multiple-choice-from-english'
+  | 'multiple-choice-target' // Show target word, choose English
+  | 'multiple-choice-english' // Show English, choose target word
   | 'listening-comprehension'
   | 'sentence-builder'
-  | 'pronunciation-practice' // ✅ NEW MODE!
+  | 'pronunciation-practice'
 
 export default function LearnPage() {
   const router = useRouter()
@@ -57,7 +56,6 @@ export default function LearnPage() {
   const [speechRecognitionAvailable, setSpeechRecognitionAvailable] = useState(false)
 
   useEffect(() => {
-    // Check speech recognition support
     setSpeechRecognitionAvailable(isSpeechRecognitionSupported())
     loadLearningSession()
   }, [])
@@ -74,7 +72,6 @@ export default function LearnPage() {
       setUserId(user.id)
       setTargetLanguage(profile.target_language)
 
-      // Check and create new cycle if needed (AUTOMATIC!)
       const { checkAndCreateNewCycle } = await import('@/lib/cycles')
       const cycle = await checkAndCreateNewCycle(user.id)
       
@@ -86,27 +83,22 @@ export default function LearnPage() {
 
       setCycleId(cycle.id)
 
-      // Get words due for review first
       let dueWords = await getWordsForReview(user.id, cycle.id)
       
-      // If no words due, get ALL cycle words for unlimited practice
       if (dueWords.length === 0) {
         console.log('No words due - loading all cycle words for practice')
         dueWords = await getCycleWords(cycle.id)
       }
       
       if (dueWords.length === 0) {
-        // No words available at all
         setCompleted(true)
         setLoading(false)
         return
       }
 
-      // Get progress data for these words
       const wordIds = dueWords.map(w => w.id)
       const progress = await getUserProgressForWords(user.id, cycle.id, wordIds)
       
-      // Convert to adapted format
       const adaptedWords = dueWords.map(word => {
         const wordProgress = progress.find(p => p.word_id === word.id)
         const translation = profile.target_language === 'french' 
@@ -124,7 +116,6 @@ export default function LearnPage() {
 
       setAllWords(adaptedWords)
 
-      // Generate multiple activities per word, then SHUFFLE
       const generatedActivities = generateAndShuffleActivities(adaptedWords)
       
       setActivities(generatedActivities)
@@ -136,11 +127,9 @@ export default function LearnPage() {
     }
   }
 
-  // Generate 2-3 activities per word, then SHUFFLE for interleaving
   function generateAndShuffleActivities(words: AdaptedWord[]): Activity[] {
     const allActivities: Activity[] = []
 
-    // Generate activities for each word
     words.forEach(word => {
       const modes = selectModesForWord(word)
       
@@ -153,34 +142,27 @@ export default function LearnPage() {
       })
     })
 
-    // SHUFFLE activities for better retention (interleaving)
     return shuffleArray(allActivities)
   }
 
-  // ✅ UPDATED: Select 2-3 modes for each word (including pronunciation practice)
   function selectModesForWord(word: AdaptedWord): ModeType[] {
     let availableModes: ModeType[] = [
-      'multiple-choice-to-english',
-      'multiple-choice-from-english',
+      'multiple-choice-target',
+      'multiple-choice-english',
       'listening-comprehension',
       'sentence-builder'
     ]
 
-    // ✅ Add pronunciation practice if supported
     if (speechRecognitionAvailable) {
       availableModes.push('pronunciation-practice')
     }
 
-    // For new words (repetition 0-1), use 3 different modes
-    // For familiar words, use 2 modes
     const modeCount = word.repetition <= 1 ? 3 : 2
 
-    // Shuffle and take first N modes
     const shuffled = shuffleArray([...availableModes])
     return shuffled.slice(0, modeCount)
   }
 
-  // Shuffle array using Fisher-Yates algorithm
   function shuffleArray<T>(array: T[]): T[] {
     const shuffled = [...array]
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -190,29 +172,22 @@ export default function LearnPage() {
     return shuffled
   }
 
-  // Handle activity completion with proper state management
   async function handleComplete(wordId: string, quality: number) {
     try {
-      // 1. Calculate updated qualities IMMEDIATELY (before setState)
       const updatedQualities = {
         ...wordQualities,
         [wordId]: [...(wordQualities[wordId] || []), quality]
       }
       setWordQualities(updatedQualities)
 
-      // 2. Increment activities completed
       const newActivitiesCompleted = activitiesCompleted + 1
       setActivitiesCompleted(newActivitiesCompleted)
 
-      // 3. Check if this is the last activity
       if (currentActivityIndex < activities.length - 1) {
-        // More activities remaining - move to next
         setCurrentActivityIndex(prev => prev + 1)
       } else {
-        // This was the last activity - save all progress and complete
         console.log('Last activity completed, saving progress...')
         
-        // Calculate average quality for each word using the updated qualities
         const wordProgressUpdates = Object.keys(updatedQualities).map(wId => {
           const qualities = updatedQualities[wId]
           const avgQuality = Math.round(
@@ -221,15 +196,12 @@ export default function LearnPage() {
           return { wordId: wId, avgQuality }
         })
 
-        // Save all word progress
         for (const { wordId: wId, avgQuality } of wordProgressUpdates) {
           await updateWordProgress(userId, wId, cycleId, avgQuality)
         }
         
-        // Update daily stats
         await updateDailyStats(userId, wordProgressUpdates.length)
         
-        // Mark as completed
         setCompleted(true)
       }
     } catch (error) {
@@ -323,24 +295,22 @@ export default function LearnPage() {
 
         {/* Activity Content */}
         <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
-          {currentActivity.modeType === 'multiple-choice-to-english' && (
+          {currentActivity.modeType === 'multiple-choice-target' && (
             <MultipleChoice
               word={currentActivity.word.word}
               correctTranslation={currentActivity.word.translation}
               incorrectOptions={getIncorrectOptions(currentActivity.word.translation, 'english')}
               language={targetLanguage}
-              direction="to-english"
               onComplete={(quality) => handleComplete(currentActivity.word.id, quality)}
             />
           )}
 
-          {currentActivity.modeType === 'multiple-choice-from-english' && (
+          {currentActivity.modeType === 'multiple-choice-english' && (
             <MultipleChoice
               word={currentActivity.word.translation}
               correctTranslation={currentActivity.word.word}
               incorrectOptions={getIncorrectOptions(currentActivity.word.word, targetLanguage)}
               language={targetLanguage}
-              direction="from-english"
               onComplete={(quality) => handleComplete(currentActivity.word.id, quality)}
             />
           )}
@@ -364,7 +334,6 @@ export default function LearnPage() {
             />
           )}
 
-          {/* ✅ NEW: Pronunciation Practice Mode */}
           {currentActivity.modeType === 'pronunciation-practice' && (
             <PronunciationPractice
               word={currentActivity.word.word}
@@ -392,7 +361,6 @@ export default function LearnPage() {
     </div>
   )
 
-  // Helper function to get incorrect options
   function getIncorrectOptions(correctAnswer: string, language: 'english' | 'french' | 'korean'): string[] {
     const options = allWords
       .filter(w => {
@@ -404,7 +372,6 @@ export default function LearnPage() {
       })
       .map(w => language === 'english' ? w.translation : w.word)
 
-    // Shuffle and take 3
     const shuffled = shuffleArray(options)
     return shuffled.slice(0, 3)
   }

@@ -301,7 +301,7 @@ export default function LearnPage() {
               correctTranslation={currentActivity.word.translation}
               incorrectOptions={getIncorrectOptions(currentActivity.word.translation, 'english')}
               language={targetLanguage}
-              questionType="translate-to-english"
+              questionType="toEnglish"
               onComplete={(quality) => handleComplete(currentActivity.word.id, quality)}
             />
           )}
@@ -312,7 +312,7 @@ export default function LearnPage() {
               correctTranslation={currentActivity.word.word}
               incorrectOptions={getIncorrectOptions(currentActivity.word.word, targetLanguage)}
               language={targetLanguage}
-              questionType="translate-from-english"
+              questionType="fromEnglish"
               onComplete={(quality) => handleComplete(currentActivity.word.id, quality)}
             />
           )}

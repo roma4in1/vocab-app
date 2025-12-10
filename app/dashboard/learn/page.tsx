@@ -1,5 +1,5 @@
 // app/dashboard/learn/page.tsx
-// ✅ FIXED: Learning page with pronunciation practice mode - NO direction prop
+// ✅ FIXED: Learning page with proper MultipleChoice props
 
 'use client'
 
@@ -301,6 +301,7 @@ export default function LearnPage() {
               correctTranslation={currentActivity.word.translation}
               incorrectOptions={getIncorrectOptions(currentActivity.word.translation, 'english')}
               language={targetLanguage}
+              questionType="translate-to-english"
               onComplete={(quality) => handleComplete(currentActivity.word.id, quality)}
             />
           )}
@@ -311,6 +312,7 @@ export default function LearnPage() {
               correctTranslation={currentActivity.word.word}
               incorrectOptions={getIncorrectOptions(currentActivity.word.word, targetLanguage)}
               language={targetLanguage}
+              questionType="translate-from-english"
               onComplete={(quality) => handleComplete(currentActivity.word.id, quality)}
             />
           )}

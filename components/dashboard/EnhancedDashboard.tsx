@@ -149,12 +149,15 @@ export default function EnhancedDashboard({
                   {userLanguage === 'french' ? '🇫🇷 French' : '🇰🇷 Korean'}
                 </span>
               </div>
+              {userProgress && (
               <ProgressBar
                 label="Words Learned"
                 value={userProgress.wordsLearned}
                 max={50}
                 color="blue"
               />
+              )}
+              {userProgress && (
               <ProgressBar
                 label="Accuracy"
                 value={userProgress.accuracy}
@@ -162,6 +165,8 @@ export default function EnhancedDashboard({
                 color="green"
                 suffix="%"
               />
+              )}
+              {userProgress && (
               <ProgressBar
                 label="Streak"
                 value={userProgress.currentStreak}
@@ -169,6 +174,7 @@ export default function EnhancedDashboard({
                 color="orange"
                 suffix=" days"
               />
+              )}
             </div>
 
             {/* Partner's Progress */}
